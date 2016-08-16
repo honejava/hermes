@@ -40,6 +40,8 @@ public enum Configs {
     KAFKA_CONSUMER_REBALANCE_MAX_RETRIES("kafka.consumer.rebalance.max.retries", 150),
     KAFKA_CONSUMER_REBALANCE_BACKOFF("kafka.consumer.rebalance.backoff", 4000),
 
+    KAFKA_CONSUMER_USE_010("kafka.consumer.use010", false),
+
     KAFKA_SIMPLE_CONSUMER_TIMEOUT_MS("kafka.simple.consumer.timeout.ms", 5000),
     KAFKA_SIMPLE_CONSUMER_BUFFER_SIZE("kafka.simple.consumer.buffer.size", 64 * 1024),
     KAFKA_SIMPLE_CONSUMER_ID_PREFIX("kafka.simple.consumer.id.prefix", "offsetChecker"),

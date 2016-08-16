@@ -71,17 +71,24 @@ public class KafkaMessageReceiverFactory implements ReceiverFactory {
                            ConsumerConfig consumerConfig,
                            Subscription subscription,
                            ConsumerRateLimiter consumerRateLimiter) {
-        MessageReceiver receiver = new KafkaMessageReceiver(
-                receivingTopic,
-                Consumer.createJavaConsumerConnector(consumerConfig),
-                messageContentWrapper,
-                hermesMetrics.timer(Timers.READ_LATENCY),
-                clock,
-                kafkaNamesMapper,
-                configFactory.getIntProperty(Configs.KAFKA_STREAM_COUNT),
-                configFactory.getIntProperty(Configs.KAFKA_CONSUMER_TIMEOUT_MS),
-                subscription,
-                schemaRepository);
+
+        MessageReceiver receiver;
+
+        if (configFactory.getBooleanProperty(Configs.KAFKA_CONSUMER_USE_010)) {
+            receiver = new KafkaSingleThreadedMessageReceiver();
+        } else {
+            receiver = new KafkaMessageReceiver(
+                    receivingTopic,
+                    Consumer.createJavaConsumerConnector(consumerConfig),
+                    messageContentWrapper,
+                    hermesMetrics.timer(Timers.READ_LATENCY),
+                    clock,
+                    kafkaNamesMapper,
+                    configFactory.getIntProperty(Configs.KAFKA_STREAM_COUNT),
+                    configFactory.getIntProperty(Configs.KAFKA_CONSUMER_TIMEOUT_MS),
+                    subscription,
+                    schemaRepository);
+        }
 
         if (configFactory.getBooleanProperty(Configs.CONSUMER_FILTERING_ENABLED)) {
             FilteredMessageHandler filteredMessageHandler = new FilteredMessageHandler(
