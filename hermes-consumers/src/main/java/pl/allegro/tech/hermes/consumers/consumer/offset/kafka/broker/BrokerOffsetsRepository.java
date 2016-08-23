@@ -173,7 +173,7 @@ public class BrokerOffsetsRepository {
 
     private OffsetCommitResponse commitOffset(SubscriptionName subscription, OffsetCommitRequest commitRequest) throws ExecutionException {
         BlockingChannel channel = channels.get(subscription);
-        channel.send(commitRequest);
+        channel.send(commitRequest.underlying());
         return OffsetCommitResponse.readFrom(channel.receive().payload());
     }
 
