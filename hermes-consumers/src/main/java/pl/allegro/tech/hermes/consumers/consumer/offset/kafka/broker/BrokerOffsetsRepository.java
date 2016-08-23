@@ -7,13 +7,12 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.Sets;
 import jersey.repackaged.com.google.common.collect.Lists;
-import kafka.api.OffsetCommitRequest$;
 import kafka.common.ErrorMapping;
 import kafka.common.OffsetAndMetadata;
 import kafka.common.OffsetMetadata;
 import kafka.common.OffsetMetadataAndError;
 import kafka.common.TopicAndPartition;
-import kafka.api.OffsetCommitRequest;
+import kafka.javaapi.OffsetCommitRequest;
 import kafka.javaapi.OffsetCommitResponse;
 import kafka.javaapi.OffsetFetchRequest;
 import kafka.javaapi.OffsetFetchResponse;
@@ -150,27 +149,12 @@ public class BrokerOffsetsRepository {
     private OffsetCommitRequest createCommitRequest(ConsumerGroupId consumerGroupId, Set<SubscriptionPartitionOffset> offsets) {
         Map<TopicAndPartition, OffsetAndMetadata> offset = createOffset(offsets);
 
-
-        return new OffsetCommitRequest(consumerGroupId.asString(),
-                convert(offset),
-                VERSION_ID,
+        return new OffsetCommitRequest(
+                consumerGroupId.asString(),
+                offset,
                 CORRELATION_ID,
                 clientId,
-                -1, offsets.iterator().next().getMemberId().get(), 1000
-                );
-
-//        return new OffsetCommitRequest(
-//                consumerGroupId.asString(),
-//                offset,
-//                CORRELATION_ID,
-//                clientId,
-//                VERSION_ID
-//        );
-    }
-
-    public <K, V> scala.collection.immutable.Map<K, V> convert(java.util.Map<K, V> m) {
-        return JavaConverters$.MODULE$.mapAsScalaMapConverter(m).asScala().toMap(
-                scala.Predef$.MODULE$.<scala.Tuple2<K, V>>conforms()
+                VERSION_ID
         );
     }
 
