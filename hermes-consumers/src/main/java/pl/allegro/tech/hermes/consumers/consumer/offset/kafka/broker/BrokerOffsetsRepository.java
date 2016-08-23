@@ -7,15 +7,18 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalNotification;
 import com.google.common.collect.Sets;
 import jersey.repackaged.com.google.common.collect.Lists;
+import kafka.api.OffsetCommitRequest$;
 import kafka.common.ErrorMapping;
 import kafka.common.OffsetAndMetadata;
+import kafka.common.OffsetMetadata;
 import kafka.common.OffsetMetadataAndError;
 import kafka.common.TopicAndPartition;
-import kafka.javaapi.OffsetCommitRequest;
+import kafka.api.OffsetCommitRequest;
 import kafka.javaapi.OffsetCommitResponse;
 import kafka.javaapi.OffsetFetchRequest;
 import kafka.javaapi.OffsetFetchResponse;
 import kafka.network.BlockingChannel;
+import kafka.utils.immutable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import pl.allegro.tech.hermes.api.SubscriptionName;
@@ -30,6 +33,7 @@ import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetsToCommit;
 import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartition;
 import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartitionOffset;
 import pl.allegro.tech.hermes.consumers.consumer.receiver.kafka.broker.CannotCommitOffsetToBrokerException;
+import scala.collection.JavaConverters$;
 
 import javax.inject.Inject;
 import java.time.Clock;
@@ -70,7 +74,8 @@ public class BrokerOffsetsRepository {
                 kafkaNamesMapper,
                 clock,
                 hostnameResolver,
-                hermesMetrics
+                hermesMetrics,
+                configFactory.getStringProperty(Configs.CONSUMER_CLIENT_ID)
         );
     }
 
@@ -79,12 +84,13 @@ public class BrokerOffsetsRepository {
                                    KafkaNamesMapper kafkaNamesMapper,
                                    Clock clock,
                                    HostnameResolver hostnameResolver,
-                                   HermesMetrics hermesMetrics) {
+                                   HermesMetrics hermesMetrics,
+                                   String clientId) {
         this.blockingChannelFactory = blockingChannelFactory;
         this.clock = clock;
         this.kafkaNamesMapper = kafkaNamesMapper;
         this.metrics = hermesMetrics;
-        this.clientId = clientId(hostnameResolver);
+        this.clientId = clientId;
 
         channels = CacheBuilder.newBuilder()
                 .expireAfterAccess(channelCacheExpiryTimeSeconds, TimeUnit.SECONDS)
@@ -144,12 +150,27 @@ public class BrokerOffsetsRepository {
     private OffsetCommitRequest createCommitRequest(ConsumerGroupId consumerGroupId, Set<SubscriptionPartitionOffset> offsets) {
         Map<TopicAndPartition, OffsetAndMetadata> offset = createOffset(offsets);
 
-        return new OffsetCommitRequest(
-                consumerGroupId.asString(),
-                offset,
+
+        return new OffsetCommitRequest(consumerGroupId.asString(),
+                convert(offset),
+                VERSION_ID,
                 CORRELATION_ID,
                 clientId,
-                VERSION_ID
+                -1, offsets.iterator().next().getMemberId().get(), 1000
+                );
+
+//        return new OffsetCommitRequest(
+//                consumerGroupId.asString(),
+//                offset,
+//                CORRELATION_ID,
+//                clientId,
+//                VERSION_ID
+//        );
+    }
+
+    public <K, V> scala.collection.immutable.Map<K, V> convert(java.util.Map<K, V> m) {
+        return JavaConverters$.MODULE$.mapAsScalaMapConverter(m).asScala().toMap(
+                scala.Predef$.MODULE$.<scala.Tuple2<K, V>>conforms()
         );
     }
 
@@ -159,9 +180,8 @@ public class BrokerOffsetsRepository {
         for (SubscriptionPartitionOffset partitionOffset : partitionOffsets) {
             TopicAndPartition topicAndPartition = new TopicAndPartition(partitionOffset.getKafkaTopicName().asString(), partitionOffset.getPartition());
             offsetsData.put(topicAndPartition, new OffsetAndMetadata(
-                    partitionOffset.getOffset(),
-                    EMPTY_METADATA,
-                    clock.millis())
+                    new OffsetMetadata(partitionOffset.getOffset(),EMPTY_METADATA),
+                    clock.millis(), -1)
             );
         }
         return offsetsData;
@@ -169,8 +189,8 @@ public class BrokerOffsetsRepository {
 
     private OffsetCommitResponse commitOffset(SubscriptionName subscription, OffsetCommitRequest commitRequest) throws ExecutionException {
         BlockingChannel channel = channels.get(subscription);
-        channel.send(commitRequest.underlying());
-        return OffsetCommitResponse.readFrom(channel.receive().buffer());
+        channel.send(commitRequest);
+        return OffsetCommitResponse.readFrom(channel.receive().payload());
     }
 
     public void moveOffset(SubscriptionPartitionOffset subscriptionPartitionOffset) {
@@ -205,7 +225,7 @@ public class BrokerOffsetsRepository {
                     clientId);
 
             channel.send(fetchRequest.underlying());
-            OffsetFetchResponse fetchResponse = OffsetFetchResponse.readFrom(channel.receive().buffer());
+            OffsetFetchResponse fetchResponse = OffsetFetchResponse.readFrom(channel.receive().payload());
             Map<TopicAndPartition, OffsetMetadataAndError> result = fetchResponse.offsets();
             OffsetMetadataAndError offset = result.get(topicAndPartition);
 

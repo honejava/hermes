@@ -3,6 +3,8 @@ package pl.allegro.tech.hermes.common.config;
 import com.google.common.io.Files;
 import pl.allegro.tech.hermes.common.util.InetAddressHostnameResolver;
 
+import java.util.UUID;
+
 import static java.lang.Math.abs;
 import static java.util.UUID.randomUUID;
 
@@ -32,7 +34,7 @@ public enum Configs {
     KAFKA_BROKER_LIST("kafka.broker.list", "localhost:9092"),
     KAFKA_NAMESPACE("kafka.namespace", ""),
     KAFKA_CONSUMER_TIMEOUT_MS("kafka.consumer.timeout.ms", 500),
-    KAFKA_CONSUMER_AUTO_OFFSET_RESET("kafka.consumer.auto.offset.reset", "largest"),
+    KAFKA_CONSUMER_AUTO_OFFSET_RESET("kafka.consumer.auto.offset.reset", "latest"),
     KAFKA_CONSUMER_OFFSETS_STORAGE("kafka.consumer.offsets.storage", "kafka"),
     KAFKA_CONSUMER_DUAL_COMMIT_ENABLED("kafka.consumer.dual.commit.enabled", true),
     KAFKA_CONSUMER_METADATA_READ_TIMEOUT("kafka.consumer.metadata.read.timeout", 5000),
@@ -40,7 +42,7 @@ public enum Configs {
     KAFKA_CONSUMER_REBALANCE_MAX_RETRIES("kafka.consumer.rebalance.max.retries", 150),
     KAFKA_CONSUMER_REBALANCE_BACKOFF("kafka.consumer.rebalance.backoff", 4000),
 
-    KAFKA_CONSUMER_USE_010("kafka.consumer.use010", false),
+    KAFKA_CONSUMER_USE_010("kafka.consumer.use010", true),
 
     KAFKA_SIMPLE_CONSUMER_TIMEOUT_MS("kafka.simple.consumer.timeout.ms", 5000),
     KAFKA_SIMPLE_CONSUMER_BUFFER_SIZE("kafka.simple.consumer.buffer.size", 64 * 1024),
@@ -141,6 +143,8 @@ public enum Configs {
     CONSUMER_BACKGROUND_SUPERVISOR_INTERVAL("consumer.supervisor.background.interval", 20_000),
     CONSUMER_BACKGROUND_SUPERVISOR_UNHEALTHY_AFTER("consumer.supervisor.background.unhealty.after", 300_000),
     CONSUMER_SIGNAL_PROCESSING_INTERVAL("consumer.supervisor.signal.processing.interval.ms", 5_000),
+
+    CONSUMER_CLIENT_ID("consumer.clientId", new InetAddressHostnameResolver().resolve()),
 
     OAUTH_MISSING_SUBSCRIPTION_HANDLERS_CREATION_DELAY("oauth.missing.subscription.handlers.creation.delay", 10_000L),
     OAUTH_SUBSCRIPTION_TOKENS_CACHE_MAX_SIZE("oauth.subscription.tokens.cache.max.size", 1000L),

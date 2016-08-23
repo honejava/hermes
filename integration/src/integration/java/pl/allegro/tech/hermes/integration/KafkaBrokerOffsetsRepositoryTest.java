@@ -65,9 +65,9 @@ public class KafkaBrokerOffsetsRepositoryTest extends IntegrationTest {
 
         wait.waitUntilConsumerMetadataAvailable(subscription, kafkaHost, kafkaPort);
 
-        blockingChannelFactory = new BlockingChannelFactory(HostAndPort.fromParts(kafkaHost, kafkaPort), readTimeout);
+        blockingChannelFactory = new BlockingChannelFactory(HostAndPort.fromParts(kafkaHost, kafkaPort), readTimeout, "clientId");
         offsetStorage = new BrokerOffsetsRepository(
-                blockingChannelFactory, channelExpTime, mapper, Clock.systemDefaultZone(), hostnameResolver, metrics
+                blockingChannelFactory, channelExpTime, mapper, Clock.systemDefaultZone(), hostnameResolver, metrics, "clientId"
         );
     }
 
@@ -109,7 +109,7 @@ public class KafkaBrokerOffsetsRepositoryTest extends IntegrationTest {
                 HostAndPort.fromParts(kafkaHost, kafkaPort), readTimeout
         );
         BrokerOffsetsRepository offsetStorage = new BrokerOffsetsRepository(
-                blockingChannelFactory, channelExpTime, mapper, Clock.systemDefaultZone(), hostnameResolver, metrics
+                blockingChannelFactory, channelExpTime, mapper, Clock.systemDefaultZone(), hostnameResolver, metrics, "clientId"
         );
 
         // when
@@ -140,7 +140,7 @@ public class KafkaBrokerOffsetsRepositoryTest extends IntegrationTest {
         private final AtomicInteger requestCount = new AtomicInteger(0);
 
         UnreliableBlockingChannelFactory(HostAndPort broker, int readTimeout) {
-            super(broker, readTimeout);
+            super(broker, readTimeout, "clientId");
         }
 
         @Override

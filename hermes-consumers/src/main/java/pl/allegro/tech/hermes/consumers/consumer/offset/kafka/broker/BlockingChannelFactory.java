@@ -1,14 +1,17 @@
 package pl.allegro.tech.hermes.consumers.consumer.offset.kafka.broker;
 
 import com.google.common.net.HostAndPort;
-import kafka.api.ConsumerMetadataRequest;
+import kafka.api.GroupCoordinatorRequest;
+import kafka.api.GroupCoordinatorResponse;
+import kafka.api.TopicMetadataRequest;
 import kafka.cluster.Broker;
+import kafka.cluster.BrokerEndPoint;
 import kafka.common.ErrorMapping;
-import kafka.javaapi.ConsumerMetadataResponse;
 import kafka.network.BlockingChannel;
 import pl.allegro.tech.hermes.common.config.ConfigFactory;
 import pl.allegro.tech.hermes.common.config.Configs;
 import pl.allegro.tech.hermes.common.kafka.ConsumerGroupId;
+import scala.Option;
 
 import javax.inject.Inject;
 import java.util.Arrays;
@@ -17,30 +20,33 @@ public class BlockingChannelFactory {
 
     private final HostAndPort broker;
     private final int readTimeout;
+    private final String clientId;
 
     @Inject
     public BlockingChannelFactory(ConfigFactory configFactory) {
         this(HostAndPort.fromString(findAnyBroker(configFactory.getStringProperty(Configs.KAFKA_BROKER_LIST))),
-                configFactory.getIntProperty(Configs.KAFKA_CONSUMER_METADATA_READ_TIMEOUT));
+                configFactory.getIntProperty(Configs.KAFKA_CONSUMER_METADATA_READ_TIMEOUT),
+                configFactory.getStringProperty(Configs.CONSUMER_CLIENT_ID));
     }
 
     private static String findAnyBroker(String brokerList) {
         return Arrays.stream(brokerList.split(",")).findAny().get();
     }
 
-    public BlockingChannelFactory(HostAndPort broker, int readTimeout) {
+    public BlockingChannelFactory(HostAndPort broker, int readTimeout, String clientId) {
         this.broker = broker;
         this.readTimeout = readTimeout;
+        this.clientId = clientId;
     }
 
     public BlockingChannel create(ConsumerGroupId consumerGroupId) {
-        ConsumerMetadataResponse metadataResponse = readConsumerMetadata(consumerGroupId);
+        GroupCoordinatorResponse metadataResponse = readConsumerMetadata(consumerGroupId);
 
         if (metadataResponse.errorCode() != ErrorMapping.NoError()) {
             throw new ReadingConsumerMetadataException(metadataResponse.errorCode());
         }
 
-        Broker coordinator = metadataResponse.coordinator();
+        BrokerEndPoint coordinator = metadataResponse.coordinatorOpt().get();
 
         BlockingChannel blockingChannel = new BlockingChannel(coordinator.host(), coordinator.port(),
                 BlockingChannel.UseDefaultBufferSize(),
@@ -50,15 +56,16 @@ public class BlockingChannelFactory {
         return blockingChannel;
     }
 
-    private ConsumerMetadataResponse readConsumerMetadata(ConsumerGroupId consumerGroupId) {
+    private GroupCoordinatorResponse readConsumerMetadata(ConsumerGroupId consumerGroupId) {
         BlockingChannel channel = new BlockingChannel(broker.getHostText(), broker.getPort(),
                 BlockingChannel.UseDefaultBufferSize(),
                 BlockingChannel.UseDefaultBufferSize(),
                 readTimeout);
 
         channel.connect();
-        channel.send(new ConsumerMetadataRequest(consumerGroupId.asString(), ConsumerMetadataRequest.CurrentVersion(), 0, "0"));
-        ConsumerMetadataResponse metadataResponse = ConsumerMetadataResponse.readFrom(channel.receive().buffer());
+        channel.send(new GroupCoordinatorRequest(consumerGroupId.asString(), GroupCoordinatorRequest.CurrentVersion(), 0, clientId));
+        GroupCoordinatorResponse metadataResponse = GroupCoordinatorResponse.readFrom(channel.receive().payload());
+
         channel.disconnect();
         return metadataResponse;
     }

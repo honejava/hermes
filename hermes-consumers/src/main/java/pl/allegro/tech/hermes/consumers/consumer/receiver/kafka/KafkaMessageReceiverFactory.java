@@ -1,7 +1,9 @@
 package pl.allegro.tech.hermes.consumers.consumer.receiver.kafka;
 
 import kafka.consumer.Consumer;
-import kafka.consumer.ConsumerConfig;
+import kafka.server.KafkaConfig;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import pl.allegro.tech.hermes.api.Subscription;
 import pl.allegro.tech.hermes.api.Topic;
 import pl.allegro.tech.hermes.common.config.ConfigFactory;
@@ -11,6 +13,8 @@ import pl.allegro.tech.hermes.common.kafka.KafkaNamesMapper;
 import pl.allegro.tech.hermes.common.message.wrapper.MessageContentWrapper;
 import pl.allegro.tech.hermes.common.metric.HermesMetrics;
 import pl.allegro.tech.hermes.common.metric.Timers;
+import pl.allegro.tech.hermes.common.util.HostnameResolver;
+import pl.allegro.tech.hermes.common.util.InetAddressHostnameResolver;
 import pl.allegro.tech.hermes.consumers.consumer.filtering.FilteredMessageHandler;
 import pl.allegro.tech.hermes.consumers.consumer.filtering.chain.FilterChainFactory;
 import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetQueue;
@@ -23,6 +27,9 @@ import pl.allegro.tech.hermes.tracker.consumers.Trackers;
 import javax.inject.Inject;
 import java.time.Clock;
 import java.util.Properties;
+import java.util.UUID;
+
+import static org.apache.kafka.clients.consumer.ConsumerConfig.*;
 
 public class KafkaMessageReceiverFactory implements ReceiverFactory {
 
@@ -68,14 +75,16 @@ public class KafkaMessageReceiverFactory implements ReceiverFactory {
     }
 
     MessageReceiver create(Topic receivingTopic,
-                           ConsumerConfig consumerConfig,
+                           kafka.consumer.ConsumerConfig consumerConfig,
                            Subscription subscription,
                            ConsumerRateLimiter consumerRateLimiter) {
 
         MessageReceiver receiver;
 
         if (configFactory.getBooleanProperty(Configs.KAFKA_CONSUMER_USE_010)) {
-            receiver = new KafkaSingleThreadedMessageReceiver();
+            receiver = new KafkaSingleThreadedMessageReceiver(
+                    createKafkaConsumer(kafkaNamesMapper.toConsumerGroupId(subscription.getQualifiedName())),
+                    messageContentWrapper, schemaRepository, kafkaNamesMapper, receivingTopic, subscription, clock);
         } else {
             receiver = new KafkaMessageReceiver(
                     receivingTopic,
@@ -101,7 +110,7 @@ public class KafkaMessageReceiverFactory implements ReceiverFactory {
         return receiver;
     }
 
-    private ConsumerConfig createConsumerConfig(ConsumerGroupId groupId) {
+    private kafka.consumer.ConsumerConfig createConsumerConfig(ConsumerGroupId groupId) {
         Properties props = new Properties();
 
         props.put("group.id", groupId.asString());
@@ -117,6 +126,22 @@ public class KafkaMessageReceiverFactory implements ReceiverFactory {
         props.put("rebalance.max.retries", configFactory.getIntPropertyAsString(Configs.KAFKA_CONSUMER_REBALANCE_MAX_RETRIES));
         props.put("rebalance.backoff.ms", configFactory.getIntPropertyAsString(Configs.KAFKA_CONSUMER_REBALANCE_BACKOFF));
 
-        return new ConsumerConfig(props);
+        return new kafka.consumer.ConsumerConfig(props);
+    }
+
+    private KafkaConsumer<byte[], byte[]> createKafkaConsumer(ConsumerGroupId groupId) {
+        Properties props = new Properties();
+        props.put(GROUP_ID_CONFIG, groupId.asString());
+        props.put(BOOTSTRAP_SERVERS_CONFIG, configFactory.getStringProperty(Configs.KAFKA_BROKER_LIST));
+        props.put(ENABLE_AUTO_COMMIT_CONFIG, "false");
+//        props.put(FETCH_MAX_WAIT_MS_CONFIG, "500");
+//        props.put(SESSION_TIMEOUT_MS_CONFIG, "1000");
+//        props.put(REQUEST_TIMEOUT_MS_CONFIG, "10000");
+//        props.put(HEARTBEAT_INTERVAL_MS_CONFIG, "3000");
+        props.put(AUTO_OFFSET_RESET_CONFIG, "latest");
+        props.put(CLIENT_ID_CONFIG, configFactory.getStringProperty(Configs.CONSUMER_CLIENT_ID));
+        props.put("key.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
+        props.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
+        return new KafkaConsumer<byte[], byte[]>(props);
     }
 }

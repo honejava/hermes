@@ -51,6 +51,8 @@ public class ConsumerProcess implements Runnable {
             }
             stop();
 
+        } catch (Exception ex) {
+            logger.error("####################", ex);
         } finally {
             logger.info("Consumer process of subscription {} released", subscriptionName);
             refreshHealthcheck();

@@ -4,9 +4,9 @@ import com.jayway.awaitility.Duration;
 import com.jayway.awaitility.core.ConditionFactory;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCollection;
-import kafka.api.ConsumerMetadataRequest;
+import kafka.api.GroupCoordinatorRequest;
+import kafka.api.GroupCoordinatorResponse;
 import kafka.common.ErrorMapping;
-import kafka.javaapi.ConsumerMetadataResponse;
 import kafka.network.BlockingChannel;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
@@ -234,9 +234,9 @@ public class Waiter extends pl.allegro.tech.hermes.test.helper.endpoint.Waiter {
         channel.connect();
 
         waitAtMost(adjust((Duration.ONE_MINUTE))).until(() -> {
-            channel.send(new ConsumerMetadataRequest(kafkaNamesMapper.toConsumerGroupId(subscription.getQualifiedName()).asString(),
-                    ConsumerMetadataRequest.CurrentVersion(), 0, "0"));
-            ConsumerMetadataResponse metadataResponse = ConsumerMetadataResponse.readFrom(channel.receive().buffer());
+            channel.send(new GroupCoordinatorRequest(kafkaNamesMapper.toConsumerGroupId(subscription.getQualifiedName()).asString(),
+                    GroupCoordinatorRequest.CurrentVersion(), 0, "0"));
+            GroupCoordinatorResponse metadataResponse = GroupCoordinatorResponse.readFrom(channel.receive().payload());
             return metadataResponse.errorCode() == ErrorMapping.NoError();
         });
 
