@@ -1,10 +1,14 @@
 package pl.allegro.tech.hermes.consumers.consumer.receiver.kafka;
 
 import com.google.common.collect.ImmutableList;
+import kafka.common.OffsetMetadata;
+import kafka.common.TopicAndPartition;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.KafkaException;
+import org.apache.kafka.common.TopicPartition;
 import pl.allegro.tech.hermes.api.ContentType;
 import pl.allegro.tech.hermes.api.Subscription;
 import pl.allegro.tech.hermes.api.Topic;
@@ -16,17 +20,20 @@ import pl.allegro.tech.hermes.common.message.wrapper.MessageContentWrapper;
 import pl.allegro.tech.hermes.common.message.wrapper.UnsupportedContentTypeException;
 import pl.allegro.tech.hermes.common.message.wrapper.UnwrappedMessageContent;
 import pl.allegro.tech.hermes.consumers.consumer.Message;
+import pl.allegro.tech.hermes.consumers.consumer.offset.FailedToCommitOffsets;
+import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetsToCommit;
+import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartitionOffset;
 import pl.allegro.tech.hermes.consumers.consumer.receiver.MessageReceiver;
 import pl.allegro.tech.hermes.consumers.consumer.receiver.MessageReceivingTimeoutException;
 import pl.allegro.tech.hermes.domain.topic.schema.SchemaRepository;
 
 import java.time.Clock;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -121,5 +128,26 @@ public class KafkaSingleThreadedMessageReceiver implements MessageReceiver {
     @Override
     public void update(Subscription newSubscription) {
         this.subscription = subscription;
+    }
+
+    @Override
+    public FailedToCommitOffsets commit(OffsetsToCommit offsets) {
+        Set<SubscriptionPartitionOffset> partitionOffsets = offsets.batchFor(subscription.getQualifiedName());
+        consumer.commitAsync(createOffset(partitionOffsets), null);
+        return new FailedToCommitOffsets();
+    }
+
+    private Map<TopicPartition, OffsetAndMetadata> createOffset(Set<SubscriptionPartitionOffset> partitionOffsets) {
+        Map<TopicPartition, OffsetAndMetadata> offsetsData = new LinkedHashMap<>();
+        for (SubscriptionPartitionOffset partitionOffset : partitionOffsets) {
+            TopicPartition topicAndPartition = new TopicPartition(partitionOffset.getKafkaTopicName().asString(), partitionOffset.getPartition());
+            offsetsData.put(topicAndPartition, new OffsetAndMetadata(partitionOffset.getOffset()));
+        }
+        return offsetsData;
+    }
+
+    @Override
+    public void moveOffset(SubscriptionPartitionOffset offset) {
+        consumer.seek(new TopicPartition(offset.getKafkaTopicName().asString(), offset.getPartition()), offset.getOffset());
     }
 }

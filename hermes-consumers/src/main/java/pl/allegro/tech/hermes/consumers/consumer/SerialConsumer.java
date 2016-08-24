@@ -7,7 +7,12 @@ import pl.allegro.tech.hermes.api.Topic;
 import pl.allegro.tech.hermes.common.config.ConfigFactory;
 import pl.allegro.tech.hermes.common.metric.HermesMetrics;
 import pl.allegro.tech.hermes.consumers.consumer.converter.MessageConverterResolver;
+import pl.allegro.tech.hermes.consumers.consumer.offset.FailedToCommitOffsets;
+import pl.allegro.tech.hermes.consumers.consumer.offset.NewMessageCommitter;
+import pl.allegro.tech.hermes.consumers.consumer.offset.NewOffsetCommitter;
+import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetCommitter;
 import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetQueue;
+import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetsToCommit;
 import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartitionOffset;
 import pl.allegro.tech.hermes.consumers.consumer.rate.AdjustableSemaphore;
 import pl.allegro.tech.hermes.consumers.consumer.rate.SerialConsumerRateLimiter;
@@ -16,6 +21,7 @@ import pl.allegro.tech.hermes.consumers.consumer.receiver.MessageReceivingTimeou
 import pl.allegro.tech.hermes.consumers.consumer.receiver.ReceiverFactory;
 import pl.allegro.tech.hermes.tracker.consumers.Trackers;
 
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import static pl.allegro.tech.hermes.common.config.Configs.CONSUMER_INFLIGHT_SIZE;
@@ -43,6 +49,8 @@ public class SerialConsumer implements Consumer {
     private Subscription subscription;
 
     private MessageReceiver messageReceiver;
+
+    private NewOffsetCommitter committer;
 
     public SerialConsumer(ReceiverFactory messageReceiverFactory,
                           HermesMetrics hermesMetrics,
@@ -73,6 +81,7 @@ public class SerialConsumer implements Consumer {
             throw new IllegalStateException("Consumer not initialized");
         };
         this.topic = topic;
+        this.committer = new NewOffsetCommitter(offsetQueue, Arrays.asList(messageReceiver::commit), 1, hermesMetrics);
     }
 
     private int calculateInflightSize(Subscription subscription) {
@@ -87,6 +96,7 @@ public class SerialConsumer implements Consumer {
         try {
             do {
                 signalsInterrupt.run();
+
             } while (!inflightSemaphore.tryAcquire(signalProcessingInterval, TimeUnit.MILLISECONDS));
 
             Message message = messageReceiver.next();
@@ -158,5 +168,15 @@ public class SerialConsumer implements Consumer {
             messageReceiver.stop();
             initializeMessageReceiver();
         }
+    }
+
+    @Override
+    public void commit() {
+        committer.run();
+    }
+
+    @Override
+    public void moveOffset(SubscriptionPartitionOffset offset) {
+        messageReceiver.moveOffset(offset);
     }
 }

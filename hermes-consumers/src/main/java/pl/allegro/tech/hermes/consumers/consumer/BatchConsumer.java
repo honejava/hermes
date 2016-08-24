@@ -151,6 +151,16 @@ public class BatchConsumer implements Consumer {
         }
     }
 
+    @Override
+    public void commit() {
+
+    }
+
+    @Override
+    public void moveOffset(SubscriptionPartitionOffset subscriptionPartitionOffset) {
+
+    }
+
     private Retryer<MessageSendingResult> createRetryer(MessageBatch batch, BatchSubscriptionPolicy policy) {
         return createRetryer(batch, policy.getMessageBackoff(), policy.getMessageTtl(), policy.isRetryClientErrors());
     }

@@ -125,7 +125,7 @@ public class NonblockingConsumersSupervisor implements ConsumersSupervisor {
                 configs.getIntProperty(Configs.CONSUMER_BACKGROUND_SUPERVISOR_INTERVAL),
                 configs.getIntProperty(Configs.CONSUMER_BACKGROUND_SUPERVISOR_INTERVAL),
                 TimeUnit.MILLISECONDS);
-        offsetCommitter.start();
+//        offsetCommitter.start();
         undeliveredMessageLogPersister.start();
     }
 
@@ -133,7 +133,7 @@ public class NonblockingConsumersSupervisor implements ConsumersSupervisor {
     public void shutdown() {
         backgroundProcess.shutdown();
         scheduledExecutor.shutdown();
-        offsetCommitter.shutdown();
+//        offsetCommitter.shutdown();
         undeliveredMessageLogPersister.shutdown();
     }
 }

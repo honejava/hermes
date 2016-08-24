@@ -9,6 +9,6 @@ public interface MessageCommitter {
 
     FailedToCommitOffsets commitOffsets(OffsetsToCommit offsetsToCommit);
 
-    void removeOffset(TopicName topicName, String subscriptionName, KafkaTopicName topic, int partition) throws Exception;
+    default void removeOffset(TopicName topicName, String subscriptionName, KafkaTopicName topic, int partition) throws Exception {};
 
 }

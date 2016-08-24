@@ -27,6 +27,10 @@ public class ConsumerProcess implements Runnable {
 
     private volatile long healtcheckRefreshTime;
 
+    private volatile long offsetCommitTime;
+
+    private long commitIntervalMs = 2000;
+
     public ConsumerProcess(
             SubscriptionName subscriptionName,
             Consumer consumer,
@@ -48,6 +52,10 @@ public class ConsumerProcess implements Runnable {
             start();
             while (running) {
                 consumer.consume(() -> processSignals());
+                if (clock.millis() - offsetCommitTime > commitIntervalMs) {
+                    consumer.commit();
+                    this.offsetCommitTime = clock.millis();
+                }
             }
             stop();
 
@@ -121,7 +129,7 @@ public class ConsumerProcess implements Runnable {
         long startTime = clock.millis();
         logger.info("Starting retransmission for consumer of subscription {}", subscriptionName);
         stop();
-        retransmitter.reloadOffsets(subscriptionName);
+        retransmitter.reloadOffsets(subscriptionName, consumer);
         start();
         logger.info("Done retransmission for consumer of subscription {} in {}ms", subscriptionName, clock.millis() - startTime);
     }

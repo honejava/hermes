@@ -8,6 +8,7 @@ import pl.allegro.tech.hermes.common.exception.RetransmissionException;
 import pl.allegro.tech.hermes.common.kafka.offset.PartitionOffset;
 import pl.allegro.tech.hermes.common.kafka.offset.PartitionOffsets;
 import pl.allegro.tech.hermes.common.kafka.offset.SubscriptionOffsetChangeIndicator;
+import pl.allegro.tech.hermes.consumers.consumer.Consumer;
 import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetsStorage;
 import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartition;
 import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartitionOffset;
@@ -34,7 +35,7 @@ public class Retransmitter {
         this.brokersClusterName = configs.getStringProperty(KAFKA_CLUSTER_NAME);
     }
 
-    public void reloadOffsets(SubscriptionName subscriptionName) {
+    public void reloadOffsets(SubscriptionName subscriptionName, Consumer consumer) {
         logger.info("Reloading offsets for {}", subscriptionName);
         try {
             PartitionOffsets offsets = subscriptionOffsetChangeIndicator.getSubscriptionOffsets(
@@ -46,9 +47,11 @@ public class Retransmitter {
                         partitionOffset.getOffset()
                 );
 
-                for (OffsetsStorage s: offsetsStorages) {
-                    s.moveSubscriptionOffset(subscriptionPartitionOffset);
-                }
+                consumer.moveOffset(subscriptionPartitionOffset);
+
+//                for (OffsetsStorage s: offsetsStorages) {
+//                    s.moveSubscriptionOffset(subscriptionPartitionOffset);
+//                }
             }
         } catch (Exception ex) {
             throw new RetransmissionException(ex);
