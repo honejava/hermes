@@ -23,13 +23,15 @@ public class Hermes {
     public static final int DEFAULT_MANAGEMENT_READ_TIMEOUT = 1000;
 
     private final String url;
+    private final String consumerUrl;
     private ClientConfig managementConfig = getDefaultManagementConfig();
     private ClientConfig publisherConfig = getDefaultPublisherConfig();
 
     private Collection<ClientRequestFilter> filters = new ArrayList<>();
 
-    public Hermes(String url) {
+    public Hermes(String url, String consumerUrl) {
         this.url = url;
+        this.consumerUrl = consumerUrl;
     }
 
     public Hermes withPassword(String password) {
@@ -79,6 +81,10 @@ public class Hermes {
 
     public OAuthProviderEndpoint createOAuthProviderEndpoint() {
         return createProxy(url, OAuthProviderEndpoint.class, managementConfig);
+    }
+
+    public ConsumerEndpoint createConsumerEndpoint() {
+        return createProxy(consumerUrl, ConsumerEndpoint.class, getDefaultManagementConfig());
     }
 
     public AsyncMessagePublisher createAsyncMessagePublisher() {

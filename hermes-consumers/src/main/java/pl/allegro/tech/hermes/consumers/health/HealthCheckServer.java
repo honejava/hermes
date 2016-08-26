@@ -10,6 +10,7 @@ import javax.inject.Inject;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 
 import static javax.ws.rs.core.Response.Status.OK;
 
@@ -18,9 +19,11 @@ public class HealthCheckServer {
     private final HttpServer server;
 
     @Inject
-    public HealthCheckServer(ConfigFactory configFactory) throws IOException {
+    public HealthCheckServer(ConfigFactory configFactory, ConsumerMonitor monitor) throws IOException {
         server = createServer(configFactory.getIntProperty(Configs.CONSUMER_HEALTH_CHECK_PORT));
-        server.createContext("/status/health", new HealthCheckHandler());
+        server.createContext("/status/health", (exchange) -> respondWithString(exchange, "{\"status\": \"UP\"}"));
+        server.createContext("/status/subscriptions", (exchange) -> respondWithString(exchange, monitor.check("subscriptions")));
+        server.createContext("/status/subscriptionsCount", (exchange) -> respondWithString(exchange, monitor.check("subscriptionsCount")));
     }
 
     private HttpServer createServer(int port) throws IOException {
@@ -29,16 +32,12 @@ public class HealthCheckServer {
         return httpServer;
     }
 
-    private static class HealthCheckHandler implements HttpHandler {
-
-        @Override
-        public void handle(HttpExchange httpExchange) throws IOException {
-            String response = "{\"status\": \"UP\"}";
-            httpExchange.sendResponseHeaders(OK.getStatusCode(), response.length());
-            OutputStream os = httpExchange.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
-        }
+    private static void respondWithString(HttpExchange httpExchange, String response) throws IOException {
+        httpExchange.getResponseHeaders().put("Content-Type", Arrays.asList("application/json"));
+        httpExchange.sendResponseHeaders(OK.getStatusCode(), response.length());
+        OutputStream os = httpExchange.getResponseBody();
+        os.write(response.getBytes());
+        os.close();
     }
 
     public void start() {

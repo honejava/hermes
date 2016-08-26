@@ -10,8 +10,11 @@ import pl.allegro.tech.hermes.common.metric.HermesMetrics;
 import pl.allegro.tech.hermes.consumers.consumer.Consumer;
 import pl.allegro.tech.hermes.consumers.supervisor.ConsumersExecutorService;
 
+import javax.annotation.concurrent.ThreadSafe;
 import java.time.Clock;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Future;
 
 public class ConsumerProcessSupervisor implements Runnable {
@@ -156,5 +159,13 @@ public class ConsumerProcessSupervisor implements Runnable {
     public void shutdown() {
         runningProcesses.stream().forEach(p -> p.accept(Signal.of(Signal.SignalType.STOP, p.getSubscriptionName())));
         executor.shutdown();
+    }
+
+    public List<String> listRunningSubscriptions() {
+        return runningProcesses.listRunningSubscriptions();
+    }
+
+    public Integer countRunningSubscriptions() {
+        return runningProcesses.count();
     }
 }

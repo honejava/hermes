@@ -138,7 +138,7 @@ public class KafkaMessageReceiverFactory implements ReceiverFactory {
 //        props.put(SESSION_TIMEOUT_MS_CONFIG, "1000");
 //        props.put(REQUEST_TIMEOUT_MS_CONFIG, "10000");
 //        props.put(HEARTBEAT_INTERVAL_MS_CONFIG, "3000");
-        props.put(AUTO_OFFSET_RESET_CONFIG, "latest");
+        props.put(AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(CLIENT_ID_CONFIG, configFactory.getStringProperty(Configs.CONSUMER_CLIENT_ID));
         props.put("key.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");
         props.put("value.deserializer", "org.apache.kafka.common.serialization.ByteArrayDeserializer");

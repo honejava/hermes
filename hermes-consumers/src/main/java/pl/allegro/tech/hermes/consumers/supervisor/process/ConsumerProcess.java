@@ -128,9 +128,7 @@ public class ConsumerProcess implements Runnable {
     private void retransmit() {
         long startTime = clock.millis();
         logger.info("Starting retransmission for consumer of subscription {}", subscriptionName);
-        stop();
         retransmitter.reloadOffsets(subscriptionName, consumer);
-        start();
         logger.info("Done retransmission for consumer of subscription {} in {}ms", subscriptionName, clock.millis() - startTime);
     }
 

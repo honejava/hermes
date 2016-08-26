@@ -13,6 +13,7 @@ import pl.allegro.tech.hermes.consumers.consumer.Consumer;
 import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetCommitter;
 import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetQueue;
 import pl.allegro.tech.hermes.consumers.consumer.receiver.MessageCommitter;
+import pl.allegro.tech.hermes.consumers.health.ConsumerMonitor;
 import pl.allegro.tech.hermes.consumers.message.undelivered.UndeliveredMessageLogPersister;
 import pl.allegro.tech.hermes.consumers.supervisor.process.ConsumerProcessSupervisor;
 import pl.allegro.tech.hermes.consumers.supervisor.process.Retransmitter;
@@ -26,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static pl.allegro.tech.hermes.api.Subscription.State.ACTIVE;
 import static pl.allegro.tech.hermes.api.Subscription.State.PENDING;
@@ -53,6 +55,7 @@ public class NonblockingConsumersSupervisor implements ConsumersSupervisor {
                                           UndeliveredMessageLogPersister undeliveredMessageLogPersister,
                                           SubscriptionRepository subscriptionRepository,
                                           HermesMetrics metrics,
+                                          ConsumerMonitor monitor,
                                           Clock clock) {
         this.consumerFactory = consumerFactory;
         this.undeliveredMessageLogPersister = undeliveredMessageLogPersister;
@@ -66,6 +69,9 @@ public class NonblockingConsumersSupervisor implements ConsumersSupervisor {
         );
         this.backgroundProcess = new ConsumerProcessSupervisor(executor, retransmitter, clock, metrics, configFactory);
         this.scheduledExecutor = createExecutorForSupervision();
+        monitor.register("subscriptions", () ->
+                "[" + backgroundProcess.listRunningSubscriptions().stream().map(s -> "\"" + s + "\"").collect(Collectors.joining(",")) + "]");
+        monitor.register("subscriptoinsCount", () -> Integer.toString(backgroundProcess.countRunningSubscriptions()));
     }
 
     private ScheduledExecutorService createExecutorForSupervision() {

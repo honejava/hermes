@@ -20,6 +20,8 @@ public class HermesEndpoints {
 
     private final OAuthProviderEndpoint oAuthProviderEndpoint;
 
+    private final ConsumerEndpoint consumerEndpoint;
+
     public HermesEndpoints(Hermes hermes) {
         this.groupEndpoint = hermes.createGroupEndpoint();
         this.topicEndpoint = hermes.createTopicEndpoint();
@@ -27,14 +29,15 @@ public class HermesEndpoints {
         this.schemaEndpoint = hermes.createSchemaEndpoint();
         this.queryEndpoint = hermes.createQueryEndpoint();
         this.oAuthProviderEndpoint = hermes.createOAuthProviderEndpoint();
+        this.consumerEndpoint = hermes.createConsumerEndpoint();
     }
 
-    public HermesEndpoints(String hermesFrontendUrl) {
-        this(createHermesFromUrl(hermesFrontendUrl));
+    public HermesEndpoints(String hermesFrontendUrl, String consumerUrl) {
+        this(createHermesFromUrl(hermesFrontendUrl, consumerUrl));
     }
 
-    private static Hermes createHermesFromUrl(String hermesFrontendUrl) {
-        return new Hermes(hermesFrontendUrl)
+    private static Hermes createHermesFromUrl(String hermesFrontendUrl, String consumerUrl) {
+        return new Hermes(hermesFrontendUrl, consumerUrl)
                 .withManagementConfig(JerseyClientFactory.createConfig())
                 .withPublisherConfig(JerseyClientFactory.createConfig());
     }
@@ -69,6 +72,10 @@ public class HermesEndpoints {
 
     public OAuthProviderEndpoint oAuthProvider() {
         return oAuthProviderEndpoint;
+    }
+
+    public ConsumerEndpoint consumer() {
+        return consumerEndpoint;
     }
 }
 

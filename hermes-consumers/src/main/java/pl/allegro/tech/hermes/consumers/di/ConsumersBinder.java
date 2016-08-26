@@ -60,6 +60,7 @@ import pl.allegro.tech.hermes.consumers.consumer.sender.resolver.InterpolatingEn
 import pl.allegro.tech.hermes.consumers.consumer.sender.timeout.FutureAsyncTimeout;
 import pl.allegro.tech.hermes.consumers.consumer.sender.timeout.FutureAsyncTimeoutFactory;
 import pl.allegro.tech.hermes.consumers.consumer.trace.MetadataAppender;
+import pl.allegro.tech.hermes.consumers.health.ConsumerMonitor;
 import pl.allegro.tech.hermes.consumers.health.HealthCheckServer;
 import pl.allegro.tech.hermes.consumers.message.undelivered.UndeliveredMessageLogPersister;
 import pl.allegro.tech.hermes.consumers.subscription.cache.SubscriptionCacheFactory;
@@ -118,6 +119,7 @@ public class ConsumersBinder extends AbstractBinder {
         bindSingleton(OffsetQueue.class);
         bindSingleton(ActiveConsumerCounter.class);
         bindSingleton(Retransmitter.class);
+        bindSingleton(ConsumerMonitor.class);
         bind(JmsMetadataAppender.class).in(Singleton.class).to(new TypeLiteral<MetadataAppender<Message>>() {});
         bind(DefaultHttpMetadataAppender.class).in(Singleton.class).to(new TypeLiteral<MetadataAppender<Request>>() {});
 
