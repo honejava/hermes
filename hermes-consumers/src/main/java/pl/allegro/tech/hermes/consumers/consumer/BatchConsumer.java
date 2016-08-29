@@ -19,6 +19,7 @@ import pl.allegro.tech.hermes.consumers.consumer.batch.MessageBatchFactory;
 import pl.allegro.tech.hermes.consumers.consumer.batch.MessageBatchReceiver;
 import pl.allegro.tech.hermes.consumers.consumer.batch.MessageBatchingResult;
 import pl.allegro.tech.hermes.consumers.consumer.converter.MessageConverterResolver;
+import pl.allegro.tech.hermes.consumers.consumer.offset.NewOffsetCommitter;
 import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetQueue;
 import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartitionOffset;
 import pl.allegro.tech.hermes.consumers.consumer.rate.BatchConsumerRateLimiter;
@@ -29,6 +30,7 @@ import pl.allegro.tech.hermes.consumers.consumer.sender.MessageSendingResult;
 import pl.allegro.tech.hermes.tracker.consumers.Trackers;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Optional;
 
 import static com.github.rholder.retry.WaitStrategies.fixedWait;
@@ -55,6 +57,7 @@ public class BatchConsumer implements Consumer {
 
     private BatchMonitoring monitoring;
     private MessageBatchReceiver receiver;
+    private NewOffsetCommitter committer;
 
     public BatchConsumer(ReceiverFactory messageReceiverFactory,
                          MessageBatchSender sender,
@@ -124,6 +127,7 @@ public class BatchConsumer implements Consumer {
 
         logger.debug("Consumer: preparing batch receiver for subscription {}", subscription.getQualifiedName());
         this.receiver = new MessageBatchReceiver(receiver, batchFactory, hermesMetrics, messageConverterResolver, messageContentWrapper, topic, trackers);
+        this.committer = new NewOffsetCommitter(offsetQueue, Arrays.asList(this.receiver::commit), 1, hermesMetrics);
     }
 
     @Override
@@ -153,12 +157,14 @@ public class BatchConsumer implements Consumer {
 
     @Override
     public void commit() {
-
+        if (committer != null) {
+            committer.run();
+        }
     }
 
     @Override
     public void moveOffset(SubscriptionPartitionOffset subscriptionPartitionOffset) {
-
+        receiver.moveOffset(subscriptionPartitionOffset);
     }
 
     private Retryer<MessageSendingResult> createRetryer(MessageBatch batch, BatchSubscriptionPolicy policy) {

@@ -10,6 +10,9 @@ import pl.allegro.tech.hermes.common.message.wrapper.UnsupportedContentTypeExcep
 import pl.allegro.tech.hermes.common.metric.HermesMetrics;
 import pl.allegro.tech.hermes.consumers.consumer.Message;
 import pl.allegro.tech.hermes.consumers.consumer.converter.MessageConverterResolver;
+import pl.allegro.tech.hermes.consumers.consumer.offset.FailedToCommitOffsets;
+import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetsToCommit;
+import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartitionOffset;
 import pl.allegro.tech.hermes.consumers.consumer.receiver.MessageReceiver;
 import pl.allegro.tech.hermes.consumers.consumer.receiver.MessageReceivingTimeoutException;
 import pl.allegro.tech.hermes.tracker.consumers.MessageMetadata;
@@ -135,4 +138,12 @@ public class MessageBatchReceiver {
     public void updateSubscription(Subscription modifiedSubscription) {
         receiver.update(modifiedSubscription);
     }
+
+    public FailedToCommitOffsets commit(OffsetsToCommit offsets) {
+        return receiver.commit(offsets);
+    };
+
+    public void moveOffset(SubscriptionPartitionOffset offset) {
+        receiver.moveOffset(offset);
+    };
 }
