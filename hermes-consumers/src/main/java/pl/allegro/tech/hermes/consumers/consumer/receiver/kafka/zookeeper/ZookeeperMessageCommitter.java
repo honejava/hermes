@@ -64,7 +64,6 @@ public class ZookeeperMessageCommitter implements MessageCommitter {
         }
     }
 
-    @Override
     public void removeOffset(TopicName topicName, String subscriptionName, KafkaTopicName topic, int partition) throws Exception {
         String offsetPath = KafkaZookeeperPaths.partitionOffsetPath(
                 kafkaNamesMapper.toConsumerGroupId(new SubscriptionName(subscriptionName, topicName)),

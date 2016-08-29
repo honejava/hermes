@@ -37,7 +37,6 @@ public class ConsumerFactory {
     private final MessageBatchFactory batchFactory;
     private final MessageContentWrapper messageContentWrapper;
     private final MessageBatchSenderFactory batchSenderFactory;
-    private final OffsetQueue offsetQueue;
     private final ConsumerAuthorizationHandler consumerAuthorizationHandler;
 
     @Inject
@@ -53,7 +52,6 @@ public class ConsumerFactory {
                            MessageBatchFactory byteBufferMessageBatchFactory,
                            MessageContentWrapper messageContentWrapper,
                            MessageBatchSenderFactory batchSenderFactory,
-                           OffsetQueue offsetQueue,
                            ConsumerAuthorizationHandler consumerAuthorizationHandler) {
 
         this.messageReceiverFactory = messageReceiverFactory;
@@ -68,7 +66,6 @@ public class ConsumerFactory {
         this.batchFactory = byteBufferMessageBatchFactory;
         this.messageContentWrapper = messageContentWrapper;
         this.batchSenderFactory = batchSenderFactory;
-        this.offsetQueue = offsetQueue;
         this.consumerAuthorizationHandler = consumerAuthorizationHandler;
     }
 
@@ -78,10 +75,10 @@ public class ConsumerFactory {
             return new BatchConsumer(messageReceiverFactory,
                     batchSenderFactory.create(subscription),
                     batchFactory,
-                    offsetQueue,
                     messageConverterResolver,
                     messageContentWrapper,
                     hermesMetrics,
+                    configFactory,
                     trackers,
                     subscription,
                     topic);
@@ -99,7 +96,6 @@ public class ConsumerFactory {
                     messageConverterResolver,
                     topic,
                     configFactory,
-                    offsetQueue,
                     consumerAuthorizationHandler);
         }
     }

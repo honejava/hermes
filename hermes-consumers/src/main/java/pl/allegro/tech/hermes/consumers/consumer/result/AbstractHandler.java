@@ -2,16 +2,17 @@ package pl.allegro.tech.hermes.consumers.consumer.result;
 
 import pl.allegro.tech.hermes.api.Subscription;
 import pl.allegro.tech.hermes.common.metric.HermesMetrics;
+import pl.allegro.tech.hermes.consumers.consumer.offset.LightOffsetCommitter;
 import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetQueue;
 import pl.allegro.tech.hermes.consumers.consumer.Message;
 
 public abstract class AbstractHandler {
 
-    protected OffsetQueue offsetQueue;
+    protected LightOffsetCommitter committer;
     protected HermesMetrics hermesMetrics;
 
-    public AbstractHandler(OffsetQueue offsetQueue, HermesMetrics hermesMetrics) {
-        this.offsetQueue = offsetQueue;
+    public AbstractHandler(LightOffsetCommitter committer, HermesMetrics hermesMetrics) {
+        this.committer = committer;
         this.hermesMetrics = hermesMetrics;
     }
 

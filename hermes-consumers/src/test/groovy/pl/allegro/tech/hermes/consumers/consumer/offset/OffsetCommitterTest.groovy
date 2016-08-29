@@ -11,7 +11,7 @@ class OffsetCommitterTest extends Specification {
 
     private OffsetQueue queue = new OffsetQueue(
             new HermesMetrics(new MetricRegistry(), new PathsCompiler("host")),
-            new ConfigFactory()
+            new ConfigFactory(), subscription
     )
 
     private MockMessageCommitter messageCommitter = new MockMessageCommitter()

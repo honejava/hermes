@@ -23,9 +23,4 @@ public class BrokerMessageCommitter implements MessageCommitter {
     public FailedToCommitOffsets commitOffsets(OffsetsToCommit offsetsToCommit) {
         return offsetsRepository.commit(offsetsToCommit);
     }
-
-    @Override
-    public void removeOffset(TopicName topicName, String subscriptionName, KafkaTopicName topic, int partition) throws Exception {
-        //Consumers commit their offsets in Kafka by writing them to topic - so offsets will be removed after specified retention time.
-    }
 }

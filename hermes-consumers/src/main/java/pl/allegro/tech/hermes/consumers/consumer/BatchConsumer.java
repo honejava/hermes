@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import pl.allegro.tech.hermes.api.BatchSubscriptionPolicy;
 import pl.allegro.tech.hermes.api.Subscription;
 import pl.allegro.tech.hermes.api.Topic;
+import pl.allegro.tech.hermes.common.config.ConfigFactory;
 import pl.allegro.tech.hermes.common.kafka.offset.PartitionOffset;
 import pl.allegro.tech.hermes.common.message.wrapper.MessageContentWrapper;
 import pl.allegro.tech.hermes.common.metric.HermesMetrics;
@@ -19,7 +20,7 @@ import pl.allegro.tech.hermes.consumers.consumer.batch.MessageBatchFactory;
 import pl.allegro.tech.hermes.consumers.consumer.batch.MessageBatchReceiver;
 import pl.allegro.tech.hermes.consumers.consumer.batch.MessageBatchingResult;
 import pl.allegro.tech.hermes.consumers.consumer.converter.MessageConverterResolver;
-import pl.allegro.tech.hermes.consumers.consumer.offset.NewOffsetCommitter;
+import pl.allegro.tech.hermes.consumers.consumer.offset.LightOffsetCommitter;
 import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetQueue;
 import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartitionOffset;
 import pl.allegro.tech.hermes.consumers.consumer.rate.BatchConsumerRateLimiter;
@@ -44,35 +45,35 @@ public class BatchConsumer implements Consumer {
     private final ReceiverFactory messageReceiverFactory;
     private final MessageBatchSender sender;
     private final MessageBatchFactory batchFactory;
-    private final OffsetQueue offsetQueue;
     private final HermesMetrics hermesMetrics;
     private final MessageConverterResolver messageConverterResolver;
     private final MessageContentWrapper messageContentWrapper;
     private final Trackers trackers;
 
     private Topic topic;
+    private ConfigFactory configs;
     private Subscription subscription;
 
     private volatile boolean consuming = true;
 
     private BatchMonitoring monitoring;
     private MessageBatchReceiver receiver;
-    private NewOffsetCommitter committer;
+    private LightOffsetCommitter committer;
 
     public BatchConsumer(ReceiverFactory messageReceiverFactory,
                          MessageBatchSender sender,
                          MessageBatchFactory batchFactory,
-                         OffsetQueue offsetQueue,
                          MessageConverterResolver messageConverterResolver,
                          MessageContentWrapper messageContentWrapper,
                          HermesMetrics hermesMetrics,
+                         ConfigFactory configs,
                          Trackers trackers,
                          Subscription subscription,
                          Topic topic) {
         this.messageReceiverFactory = messageReceiverFactory;
         this.sender = sender;
         this.batchFactory = batchFactory;
-        this.offsetQueue = offsetQueue;
+        this.configs = configs;
         this.subscription = subscription;
         this.hermesMetrics = hermesMetrics;
         this.monitoring = new BatchMonitoring(hermesMetrics, trackers);
@@ -110,13 +111,13 @@ public class BatchConsumer implements Consumer {
 
     private void offerInflightOffsets(MessageBatch batch) {
         for (PartitionOffset offset : batch.getPartitionOffsets()) {
-            offsetQueue.offerInflightOffset(SubscriptionPartitionOffset.subscriptionPartitionOffset(offset, subscription));
+            committer.offerInflightOffset(SubscriptionPartitionOffset.subscriptionPartitionOffset(offset, subscription));
         }
     }
 
     private void offerCommittedOffsets(MessageBatch batch) {
         for (PartitionOffset offset : batch.getPartitionOffsets()) {
-            offsetQueue.offerCommittedOffset(SubscriptionPartitionOffset.subscriptionPartitionOffset(offset, subscription));
+            committer.offerCommittedOffset(SubscriptionPartitionOffset.subscriptionPartitionOffset(offset, subscription));
         }
     }
 
@@ -127,7 +128,7 @@ public class BatchConsumer implements Consumer {
 
         logger.debug("Consumer: preparing batch receiver for subscription {}", subscription.getQualifiedName());
         this.receiver = new MessageBatchReceiver(receiver, batchFactory, hermesMetrics, messageConverterResolver, messageContentWrapper, topic, trackers);
-        this.committer = new NewOffsetCommitter(offsetQueue, Arrays.asList(this.receiver::commit), 1, hermesMetrics);
+        this.committer = new LightOffsetCommitter(new OffsetQueue(hermesMetrics, configs), Arrays.asList(this.receiver::commit), hermesMetrics);
     }
 
     @Override

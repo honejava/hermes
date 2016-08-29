@@ -8,6 +8,7 @@ import pl.allegro.tech.hermes.common.metric.Counters;
 import pl.allegro.tech.hermes.common.metric.HermesMetrics;
 import pl.allegro.tech.hermes.common.metric.Meters;
 import pl.allegro.tech.hermes.consumers.consumer.Message;
+import pl.allegro.tech.hermes.consumers.consumer.offset.LightOffsetCommitter;
 import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetQueue;
 import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartitionOffset;
 import pl.allegro.tech.hermes.consumers.consumer.sender.MessageSendingResult;
@@ -27,10 +28,10 @@ public class DefaultErrorHandler extends AbstractHandler implements ErrorHandler
     private final Trackers trackers;
     private final String cluster;
 
-    public DefaultErrorHandler(OffsetQueue offsetQueue,
+    public DefaultErrorHandler(LightOffsetCommitter committer,
                                HermesMetrics hermesMetrics,
                                UndeliveredMessageLog undeliveredMessageLog, Clock clock, Trackers trackers, String cluster) {
-        super(offsetQueue, hermesMetrics);
+        super(committer, hermesMetrics);
         this.undeliveredMessageLog = undeliveredMessageLog;
         this.clock = clock;
         this.trackers = trackers;
@@ -41,7 +42,7 @@ public class DefaultErrorHandler extends AbstractHandler implements ErrorHandler
     public void handleDiscarded(Message message, Subscription subscription, MessageSendingResult result) {
         logResult(message, subscription, result);
 
-        offsetQueue.offerCommittedOffset(SubscriptionPartitionOffset.subscriptionPartitionOffset(message, subscription));
+        committer.offerCommittedOffset(SubscriptionPartitionOffset.subscriptionPartitionOffset(message, subscription));
 
         updateMeters(subscription);
         updateMetrics(Counters.DISCARDED, message, subscription);

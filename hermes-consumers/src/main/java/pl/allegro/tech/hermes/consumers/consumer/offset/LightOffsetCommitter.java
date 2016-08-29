@@ -61,17 +61,13 @@ import java.util.function.Function;
  * <p>
  * This algorithm is very simple, memory efficient, can be performed in single thread and introduces no locks.
  */
-public class NewOffsetCommitter implements Runnable {
+public class LightOffsetCommitter implements Runnable {
 
     private static final Logger logger = LoggerFactory.getLogger(OffsetCommitter.class);
 
-    private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
-
-    private final int offsetCommitPeriodSeconds;
-
     private final OffsetQueue offsetQueue;
 
-    private final List<NewMessageCommitter> messageCommitters;
+    private final List<MessageCommitter> messageCommitters;
 
     private final HermesMetrics metrics;
 
@@ -81,15 +77,13 @@ public class NewOffsetCommitter implements Runnable {
 
     private final MpscArrayQueue<SubscriptionName> subscriptionsToCleanup = new MpscArrayQueue<>(1000);
 
-    public NewOffsetCommitter(
+    public LightOffsetCommitter(
             OffsetQueue offsetQueue,
-            List<NewMessageCommitter> messageCommitters,
-            int offsetCommitPeriodSeconds,
+            List<MessageCommitter> messageCommitters,
             HermesMetrics metrics
     ) {
         this.offsetQueue = offsetQueue;
         this.messageCommitters = messageCommitters;
-        this.offsetCommitPeriodSeconds = offsetCommitPeriodSeconds;
         this.metrics = metrics;
     }
 
@@ -158,7 +152,7 @@ public class NewOffsetCommitter implements Runnable {
     }
 
     private void commit(OffsetsToCommit offsetsToCommit) {
-        for (NewMessageCommitter committer : messageCommitters) {
+        for (MessageCommitter committer : messageCommitters) {
             FailedToCommitOffsets failedOffsets = committer.commitOffsets(offsetsToCommit);
 
             if (failedOffsets.hasFailed()) {
@@ -181,16 +175,12 @@ public class NewOffsetCommitter implements Runnable {
         }
     }
 
-    public void start() {
-        scheduledExecutor.scheduleWithFixedDelay(this,
-                offsetCommitPeriodSeconds,
-                offsetCommitPeriodSeconds,
-                TimeUnit.SECONDS
-        );
+    public void offerInflightOffset(SubscriptionPartitionOffset subscriptionPartitionOffset) {
+        offsetQueue.offerInflightOffset(subscriptionPartitionOffset);
     }
 
-    public void shutdown() {
-        scheduledExecutor.shutdown();
+    public void offerCommittedOffset(SubscriptionPartitionOffset subscriptionPartitionOffset) {
+        offsetQueue.offerCommittedOffset(subscriptionPartitionOffset);
     }
 
     private static final class ReducingConsumer implements MessagePassingQueue.Consumer<SubscriptionPartitionOffset> {

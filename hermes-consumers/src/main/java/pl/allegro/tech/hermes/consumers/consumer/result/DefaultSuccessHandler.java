@@ -5,6 +5,7 @@ import pl.allegro.tech.hermes.common.metric.Counters;
 import pl.allegro.tech.hermes.common.metric.HermesMetrics;
 import pl.allegro.tech.hermes.common.metric.Meters;
 import pl.allegro.tech.hermes.consumers.consumer.Message;
+import pl.allegro.tech.hermes.consumers.consumer.offset.LightOffsetCommitter;
 import pl.allegro.tech.hermes.consumers.consumer.offset.OffsetQueue;
 import pl.allegro.tech.hermes.consumers.consumer.offset.SubscriptionPartitionOffset;
 import pl.allegro.tech.hermes.consumers.consumer.sender.MessageSendingResult;
@@ -16,14 +17,14 @@ public class DefaultSuccessHandler extends AbstractHandler implements SuccessHan
 
     private final Trackers trackers;
 
-    public DefaultSuccessHandler(OffsetQueue offsetQueue, HermesMetrics hermesMetrics, Trackers trackers) {
-        super(offsetQueue, hermesMetrics);
+    public DefaultSuccessHandler(LightOffsetCommitter committer, HermesMetrics hermesMetrics, Trackers trackers) {
+        super(committer, hermesMetrics);
         this.trackers = trackers;
     }
 
     @Override
     public void handleSuccess(Message message, Subscription subscription, MessageSendingResult result) {
-        offsetQueue.offerCommittedOffset(SubscriptionPartitionOffset.subscriptionPartitionOffset(message, subscription));
+        committer.offerCommittedOffset(SubscriptionPartitionOffset.subscriptionPartitionOffset(message, subscription));
 
         updateMeters(subscription, result);
         updateMetrics(Counters.DELIVERED, message, subscription);

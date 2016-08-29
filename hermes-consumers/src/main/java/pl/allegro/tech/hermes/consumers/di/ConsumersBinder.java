@@ -116,7 +116,6 @@ public class ConsumersBinder extends AbstractBinder {
         bindSingleton(NoOperationMessageConverter.class);
         bindSingleton(AvroToJsonMessageConverter.class);
         bindSingleton(MessageConverterResolver.class);
-        bindSingleton(OffsetQueue.class);
         bindSingleton(ActiveConsumerCounter.class);
         bindSingleton(Retransmitter.class);
         bindSingleton(ConsumerMonitor.class);
